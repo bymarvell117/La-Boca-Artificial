@@ -235,3 +235,57 @@ export function moteado(color, x, y, z, escala = 0.8, fuerza = 0.12) {
 
 // Mezcla de dos colores THREE.Color → [r, g, b]
 export const mezcla = (a, b, t) => [lerp(a.r, b.r, t), lerp(a.g, b.g, t), lerp(a.b, b.b, t)];
+
+// Fusiona varias geometrías (cada una con su matriz) en una sola, para
+// dibujarlas en una llamada. Devuelve la geometría y, por vértice, el índice
+// de la pieza de origen (para volver a colorear).
+export function fusionar(piezas) {
+  const gs = piezas.map(({ geo, matriz }) => {
+    let g = geo.clone();
+    if (matriz) g.applyMatrix4(matriz);
+    if (!g.index) {
+      const n = g.attributes.position.count;
+      g.setIndex(Array.from({ length: n }, (_, i) => i));
+    }
+    // una matriz con reflejo invierte el orden de los triángulos: se corrige
+    if (matriz && matriz.determinant() < 0) {
+      const ix = g.index.array.slice();
+      for (let i = 0; i < ix.length; i += 3) [ix[i + 1], ix[i + 2]] = [ix[i + 2], ix[i + 1]];
+      g.setIndex(Array.from(ix));
+    }
+    if (!g.attributes.normal) g.computeVertexNormals();
+    return g;
+  });
+  let nv = 0;
+  let ni = 0;
+  for (const g of gs) {
+    nv += g.attributes.position.count;
+    ni += g.index.count;
+  }
+  const pos = new Float32Array(nv * 3);
+  const nor = new Float32Array(nv * 3);
+  const col = new Float32Array(nv * 3).fill(1);
+  const idx = new Uint32Array(ni);
+  const pieza = new Uint16Array(nv);
+  let ov = 0;
+  let oi = 0;
+  gs.forEach((g, k) => {
+    const n = g.attributes.position.count;
+    pos.set(g.attributes.position.array.subarray(0, n * 3), ov * 3);
+    nor.set(g.attributes.normal.array.subarray(0, n * 3), ov * 3);
+    if (g.attributes.color) col.set(g.attributes.color.array.subarray(0, n * 3), ov * 3);
+    const ix = g.index.array;
+    for (let i = 0; i < ix.length; i++) idx[oi + i] = ix[i] + ov;
+    pieza.fill(k, ov, ov + n);
+    ov += n;
+    oi += ix.length;
+    g.dispose();
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+  geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  geo.setIndex(new THREE.BufferAttribute(idx, 1));
+  geo.computeBoundingSphere();
+  return { geo, pieza };
+}
