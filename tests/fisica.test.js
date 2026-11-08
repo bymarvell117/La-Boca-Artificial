@@ -215,3 +215,21 @@ test('la /s/ silba en los agudos y la /ch/ y la jota quedan más graves', () => 
   assert.ok(s > 5000, `s ${s}`);
   assert.ok(s > ch && ch > x, `s ${s} ch ${ch} x ${x}`);
 });
+
+test('/b/ inicial y tras nasal: vibra durante el cierre y explota mucho menos que /p/', () => {
+  for (const p of ['ba', 'ambo']) {
+    const b = new BocaArtificial(SR);
+    const plan = planificar(p);
+    b.decir(plan);
+    const voz = [];
+    let explosionB = 0;
+    correr(b, plan.duracion, (e) => {
+      if (e.etiqueta === 'b') voz.push(e.vibracion);
+      explosionB = Math.max(explosionB, b.amp.explosion);
+    });
+    const conVoz = voz.filter((v) => v > 0.15).length / voz.length;
+    assert.ok(conVoz > 0.85, `${p}: ${Math.round(conVoz * 100)} % del cierre con voz`);
+    const explosionP = Math.max(...seguir('apa').map((s) => s.explosion));
+    assert.ok(explosionB < explosionP * 0.4, `${p}: explosión ${explosionB} vs /p/ ${explosionP}`);
+  }
+});

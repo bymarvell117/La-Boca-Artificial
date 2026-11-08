@@ -227,6 +227,9 @@ export class BocaArtificial {
       if (this.respiracion === 'inspirar') this.respiracion = 'habla';
       this.sinAire = false;
     }
+    // Oclusiva sonora (/b d g/ con cierre): la cavidad se expande para seguir vibrando.
+    const sonoraCerrada = boca === 0 && this.objetivo.aduccion > 0.6 ? 1 : 0;
+    p.expansion += (sonoraCerrada - p.expansion) * (1 - Math.exp(-dt / 0.015));
     p.actualizar(dt, this.areaGlotisMedia, faringe, boca, nariz);
 
     // Fuente de voz: necesita cuerdas juntas y presión a través de la glotis.
@@ -268,7 +271,9 @@ export class BocaArtificial {
     // y se apaga en ~10 ms.
     if (boca === 0) this.iCierre = iMin; // dónde está cerrado
     if (this.bocaPrevia === 0 && boca > 0 && p.pBoca > 1.5) {
-      this.envExplosion = Math.max(this.envExplosion, clamp(p.pBoca / 8, 0, 1));
+      // las sonoras explotan mucho menos que las sordas
+      const sonora = this.objetivo.aduccion > 0.6 ? 0.35 : 1;
+      this.envExplosion = Math.max(this.envExplosion, clamp(p.pBoca / 8, 0, 1) * sonora);
       this.colorearExplosion();
     }
     this.bocaPrevia = boca;

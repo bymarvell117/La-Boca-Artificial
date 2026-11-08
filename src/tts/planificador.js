@@ -27,7 +27,10 @@ export function planificar(texto, opciones = {}) {
   const ms = (x) => x / 1000 / velocidad;
 
   ev(INSPIRAR, 'inspira');
-  t += 0.45;
+  t += 0.38;
+  // antes de la primera palabra: las cuerdas se acercan y sube la presión
+  ev({ respiracion: 'habla', aduccion: 0.45, labios: 0.4 });
+  t += 0.07;
 
   grupos.forEach((g, gi) => {
     const fon = g.fonemas;

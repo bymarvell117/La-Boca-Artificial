@@ -39,6 +39,7 @@ export class Pulmones {
     // Control automático
     this.modo = 'tranquila'; // tranquila | habla | pausa | inspirar | manual
     this.presionObjetivo = 7;
+    this.expansion = 0; // 0..1, expansión activa de la cavidad (oclusivas sonoras)
     this.cicloT = 0;
   }
 
@@ -48,6 +49,7 @@ export class Pulmones {
 
   // Decide la activación muscular según el modo.
   controlar(dt) {
+    this.factorSuave = 1 - Math.exp(-dt / 0.03);
     const rec = this.retroceso(this.volumen);
     if (this.modo === 'manual') return;
 
@@ -71,6 +73,9 @@ export class Pulmones {
 
   // Reparte una presión muscular entre diafragma e intercostales.
   aplicarPresionMuscular(pMus) {
+    // los músculos no cambian de golpe (~30 ms)
+    this.pMusSuave = (this.pMusSuave ?? pMus) + (pMus - (this.pMusSuave ?? pMus)) * this.factorSuave;
+    pMus = this.pMusSuave;
     if (pMus < 0) {
       const f = Math.min(1, -pMus / (P_DIAFRAGMA * 0.7 + P_INTERCOSTALES * 0.3));
       this.diafragma = f;
@@ -105,7 +110,9 @@ export class Pulmones {
     // (estable aunque la boca se abra de golpe).
     const pl = this.pPulmon;
     const p0 = this.pBoca;
-    const c = dt / COMPLIANCIA_BOCA;
+    // Con la boca cerrada y la voz activa, mejillas y faringe se expanden
+    // (y la laringe baja): la cavidad admite más aire y la presión sube despacio.
+    const c = dt / (COMPLIANCIA_BOCA * (1 + 5 * this.expansion));
     const f = (p) => p - p0 - c * (orificio(aGlot, pl - p) - orificio(aSup, p));
     let lo = Math.min(0, pl, p0) - 1;
     let hi = Math.max(0, pl, p0) + 1;

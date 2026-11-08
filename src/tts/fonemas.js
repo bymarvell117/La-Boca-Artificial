@@ -44,7 +44,7 @@ export const FONEMAS = {
 
   // Aproximantes (b, d, g suaves entre vocales)
   // La mandíbula sube un poco para que el estrechamiento sea real.
-  β: { tipo: 'aproximante', dur: 60, o: { labios: 0.12, mandibula: 0.3, velo: 0, aduccion: SONORA } },
+  β: { tipo: 'aproximante', dur: 60, o: { labios: 0.15, mandibula: 0.25, velo: 0, aduccion: SONORA } },
   ð: { tipo: 'aproximante', dur: 55, o: { puntaPos: 37, puntaApertura: 0.16, mandibula: 0.3, velo: 0, aduccion: SONORA } },
   ɣ: { tipo: 'aproximante', dur: 60, o: { lenguaPos: 24, lenguaAltura: 0.16, mandibula: 0.3, velo: 0, aduccion: SONORA } },
 
