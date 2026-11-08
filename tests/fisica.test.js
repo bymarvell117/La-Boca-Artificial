@@ -120,3 +120,37 @@ test('las resonancias son nítidas (ancho de banda del F1 de /a/ < 150 Hz)', asy
   const bw = anchoBandaF1(VOCALES.a);
   assert.ok(bw < 150, `ancho de banda ${bw} Hz`);
 });
+
+// --- Consonantes entre vocales ---------------------------------------------
+
+function seguir(palabra) {
+  const b = new BocaArtificial(SR);
+  const plan = planificar(palabra);
+  b.decir(plan);
+  const pasos = [];
+  correr(b, plan.duracion + 0.1, (e) =>
+    pasos.push({ et: e.etiqueta, dmin: Math.min(...e.dTracto.slice(17)), pb: e.pBoca, pl: e.pPulmon, explosion: b.amp.explosion }),
+  );
+  return pasos;
+}
+
+test('la /r/ simple (ara) y la múltiple (arra) llegan a cerrar', () => {
+  for (const [p, f] of [['ara', 'ɾ'], ['arra', 'r']]) {
+    const dmin = Math.min(...seguir(p).filter((s) => s.et === f).map((s) => s.dmin));
+    assert.equal(dmin, 0, p);
+  }
+});
+
+test('/b d g l/ entre vocales estrechan de verdad (no suenan a vocal)', () => {
+  for (const [p, f] of [['aba', 'β'], ['ada', 'ð'], ['aga', 'ɣ'], ['ala', 'l']]) {
+    const dmin = Math.min(...seguir(p).filter((s) => s.et === f).map((s) => s.dmin));
+    assert.ok(dmin < 0.32, `${p}: ${dmin}`);
+  }
+});
+
+test('/p t k/ explotan al soltar; /b/ suave no', () => {
+  for (const p of ['apa', 'ata', 'aka']) {
+    assert.ok(Math.max(...seguir(p).map((s) => s.explosion)) > 0.5, p);
+  }
+  assert.equal(Math.max(...seguir('aba').map((s) => s.explosion)), 0);
+});

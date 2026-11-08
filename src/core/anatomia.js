@@ -49,7 +49,8 @@ export function diametroBase(i, mandibula) {
 export function diametrosTracto(a, out) {
   const jaw = a.mandibula;
   // La mandíbula abierta separa la lengua del paladar, salvo en un cierre total.
-  const lenguaMin = a.lenguaAltura + 0.25 * jaw * Math.min(1, a.lenguaAltura / 0.3);
+  // (valores negativos = el órgano empuja más allá del contacto: cierre firme)
+  const lenguaMin = Math.max(0, a.lenguaAltura + 0.25 * jaw * Math.min(1, Math.max(0, a.lenguaAltura) / 0.3));
   for (let i = 0; i < N; i++) {
     let d = diametroBase(i, jaw);
 
@@ -67,14 +68,14 @@ export function diametrosTracto(a, out) {
     if (a.puntaApertura < 2.9 && i >= 30 && i <= 39) {
       const dist = (i - a.puntaPos) / 1.3;
       const w = Math.exp(-dist * dist);
-      const punta = a.puntaApertura + 0.25 * jaw * Math.min(1, a.puntaApertura / 0.3);
+      const punta = Math.max(0, a.puntaApertura + 0.25 * jaw * Math.min(1, Math.max(0, a.puntaApertura) / 0.3));
       const v = d * (1 - w) + Math.min(d, punta) * w;
       if (v < d) d = v;
     }
 
     // Labios: los últimos segmentos los fija la apertura labial.
     if (i >= REGION.labios[0]) {
-      const lab = a.labios + 0.4 * jaw * Math.min(1, a.labios * 4);
+      const lab = Math.max(0, a.labios + 0.4 * jaw * Math.min(1, Math.max(0, a.labios) * 4));
       const t = (i - REGION.labios[0] + 1) / (N - REGION.labios[0]);
       d = d * (1 - t) + lab * t;
       if (i >= N - 2) d = lab;

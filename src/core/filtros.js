@@ -86,6 +86,15 @@ export class Biquad {
       A + 1 + (A - 1) * c + r, -2 * (A - 1 + (A + 1) * c), A + 1 + (A - 1) * c - r,
     );
   }
+  // Cambia la frecuencia de corte sin perder el estado (sin chasquidos).
+  fijarPasaBajos(sr, fc, q = Math.SQRT1_2) {
+    const n = Biquad.pasaBajos(sr, fc, q);
+    this.b0 = n.b0;
+    this.b1 = n.b1;
+    this.b2 = n.b2;
+    this.a1 = n.a1;
+    this.a2 = n.a2;
+  }
   paso(x) {
     const y = this.b0 * x + this.b1 * this.x1 + this.b2 * this.x2 - this.a1 * this.y1 - this.a2 * this.y2;
     this.x2 = this.x1;

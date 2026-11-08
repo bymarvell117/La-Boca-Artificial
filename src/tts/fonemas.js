@@ -35,17 +35,18 @@ export const FONEMAS = {
 
   // Oclusivas: cierre y luego explosión al abrir (la explosión sale sola de
   // la presión acumulada en la boca).
-  p: { tipo: 'oclusiva', dur: 85, o: { labios: 0, velo: 0, aduccion: SORDA } },
-  b: { tipo: 'oclusiva', dur: 65, o: { labios: 0, velo: 0, aduccion: SONORA } },
-  t: { tipo: 'oclusiva', dur: 80, o: { puntaPos: 37, puntaApertura: 0, velo: 0, aduccion: SORDA } },
-  d: { tipo: 'oclusiva', dur: 60, o: { puntaPos: 37, puntaApertura: 0, velo: 0, aduccion: SONORA } },
-  k: { tipo: 'oclusiva', dur: 85, o: { lenguaPos: 24, lenguaAltura: 0, velo: 0, aduccion: SORDA } },
-  g: { tipo: 'oclusiva', dur: 65, o: { lenguaPos: 24, lenguaAltura: 0, velo: 0, aduccion: SONORA } },
+  p: { tipo: 'oclusiva', dur: 85, o: { labios: -0.3, velo: 0, aduccion: SORDA } },
+  b: { tipo: 'oclusiva', dur: 65, o: { labios: -0.3, velo: 0, aduccion: SONORA } },
+  t: { tipo: 'oclusiva', dur: 80, o: { puntaPos: 37, puntaApertura: -0.6, velo: 0, aduccion: SORDA } },
+  d: { tipo: 'oclusiva', dur: 60, o: { puntaPos: 37, puntaApertura: -0.6, velo: 0, aduccion: SONORA } },
+  k: { tipo: 'oclusiva', dur: 85, o: { lenguaPos: 24, lenguaAltura: -0.12, velo: 0, aduccion: SORDA } },
+  g: { tipo: 'oclusiva', dur: 65, o: { lenguaPos: 24, lenguaAltura: -0.12, velo: 0, aduccion: SONORA } },
 
   // Aproximantes (b, d, g suaves entre vocales)
-  β: { tipo: 'aproximante', dur: 55, o: { labios: 0.22, velo: 0, aduccion: SONORA } },
-  ð: { tipo: 'aproximante', dur: 50, o: { puntaPos: 37, puntaApertura: 0.3, velo: 0, aduccion: SONORA } },
-  ɣ: { tipo: 'aproximante', dur: 55, o: { lenguaPos: 24, lenguaAltura: 0.3, velo: 0, aduccion: SONORA } },
+  // La mandíbula sube un poco para que el estrechamiento sea real.
+  β: { tipo: 'aproximante', dur: 60, o: { labios: 0.12, mandibula: 0.3, velo: 0, aduccion: SONORA } },
+  ð: { tipo: 'aproximante', dur: 55, o: { puntaPos: 37, puntaApertura: 0.16, mandibula: 0.3, velo: 0, aduccion: SONORA } },
+  ɣ: { tipo: 'aproximante', dur: 60, o: { lenguaPos: 24, lenguaAltura: 0.16, mandibula: 0.3, velo: 0, aduccion: SONORA } },
 
   // Fricativas
   f: { tipo: 'fricativa', dur: 100, o: { labios: 0.1, velo: 0, aduccion: SORDA } },
@@ -55,18 +56,19 @@ export const FONEMAS = {
   ʝ: { tipo: 'fricativa', dur: 70, o: { lenguaPos: 30, lenguaAltura: 0.12, mandibula: 0.2, puntaApertura: 3, velo: 0, aduccion: SONORA } },
 
   // Africada: cierre + fricación en la misma zona
-  tʃ: { tipo: 'africada', dur: 110, o: { puntaPos: 34, puntaApertura: 0, lenguaPos: 29, lenguaAltura: 0.4, velo: 0, aduccion: SORDA },
-    suelta: { puntaApertura: 0.13 } },
+  tʃ: { tipo: 'africada', dur: 110, o: { puntaPos: 34, puntaApertura: -0.6, lenguaPos: 29, lenguaAltura: 0.4, velo: 0, aduccion: SORDA },
+    suelta: { puntaApertura: 0.15 } },
 
   // Nasales: boca cerrada en algún punto y velo bajado
-  m: { tipo: 'nasal', dur: 70, o: { labios: 0, velo: 1, aduccion: SONORA } },
-  n: { tipo: 'nasal', dur: 65, o: { puntaPos: 36, puntaApertura: 0, velo: 1, aduccion: SONORA } },
-  ɲ: { tipo: 'nasal', dur: 80, o: { lenguaPos: 30, lenguaAltura: 0, puntaApertura: 3, velo: 1, aduccion: SONORA } },
+  m: { tipo: 'nasal', dur: 70, o: { labios: -0.3, velo: 1, aduccion: SONORA } },
+  n: { tipo: 'nasal', dur: 65, o: { puntaPos: 36, puntaApertura: -0.6, velo: 1, aduccion: SONORA } },
+  ɲ: { tipo: 'nasal', dur: 80, o: { lenguaPos: 30, lenguaAltura: -0.12, puntaApertura: 3, velo: 1, aduccion: SONORA } },
 
   // Líquidas
-  l: { tipo: 'lateral', dur: 65, o: { puntaPos: 36, puntaApertura: 0.35, velo: 0, aduccion: SONORA } },
-  ɾ: { tipo: 'vibrante', dur: 28, o: { puntaPos: 35, puntaApertura: 0, velo: 0, aduccion: SONORA } },
-  r: { tipo: 'vibrante', dur: 150, golpes: 3, o: { puntaPos: 35, puntaApertura: 0, velo: 0, aduccion: SONORA } },
+  // /l/: la punta toca los alvéolos y el aire sale por los lados (estrechamiento equivalente).
+  l: { tipo: 'lateral', dur: 70, o: { puntaPos: 36, puntaApertura: 0.2, mandibula: 0.3, velo: 0, aduccion: SONORA } },
+  ɾ: { tipo: 'vibrante', dur: 40, o: { puntaPos: 35, puntaApertura: -0.6, mandibula: 0.35, velo: 0, aduccion: SONORA } },
+  r: { tipo: 'vibrante', dur: 165, golpes: 3, o: { puntaPos: 35, puntaApertura: -0.6, mandibula: 0.35, velo: 0, aduccion: SONORA } },
 };
 
 export const esVocal = (f) => FONEMAS[f]?.tipo === 'vocal';

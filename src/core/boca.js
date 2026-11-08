@@ -19,12 +19,12 @@ import { Resonador, Ruido, PasoAltos, Biquad } from './filtros.js';
 
 // Velocidad de cada articulador (constante de tiempo en segundos).
 export const INERCIA = {
-  lenguaPos: 0.06,
-  lenguaAltura: 0.045,
-  puntaPos: 0.03,
-  puntaApertura: 0.012,
-  labios: 0.018,
-  mandibula: 0.05,
+  lenguaPos: 0.045,
+  lenguaAltura: 0.03,
+  puntaPos: 0.02,
+  puntaApertura: 0.006,
+  labios: 0.012,
+  mandibula: 0.04,
   velo: 0.035,
   laringe: 0.1,
   aduccion: 0.015,
@@ -71,7 +71,9 @@ export class BocaArtificial {
     //  - a la salida, se recortan los graves bajo el tono (hum) y lo que
     //    queda por encima de 8 kHz (aliasing de la guía de ondas).
     this.fuenteLP = Biquad.pasaBajos(sr, 4200, 0.6);
-    this.aspLP = Biquad.pasaBajos(sr, 2800, 0.7); // la aspiración real es grave-media
+    this.aspLP = Biquad.pasaBajos(sr, 2800, 0.7);
+    this.friccionLP = Biquad.pasaBajos(sr, 11000, 0.8);
+    this.dientesHP = Biquad.pasaAltos(sr, 3800, 0.7); // la aspiración real es grave-media
     this.salidaHP = Biquad.pasaAltos(sr, 85, 0.7);
     this.estante = Biquad.estanteGraves(sr, 320, -5);
     this.salidaLP1 = Biquad.pasaBajos(sr, 8500, 0.54);
@@ -94,12 +96,14 @@ export class BocaArtificial {
     this.dNariz = new Float64Array(NARIZ_N);
 
     // amplitudes (por bloque, interpoladas por muestra)
-    this.amp = { voz: 0, aspiracion: 0, friccion: 0, dientes: 0 };
+    this.amp = { voz: 0, aspiracion: 0, friccion: 0, dientes: 0, explosion: 0 };
     this.ampPrev = { ...this.amp };
     this.iFriccion = -1;
     this.iEstrechez = -1;
-    this.iDientes = INDICE_DIENTES;
-    this.pBocaPrevia = 0;
+    this.labial = false;
+    this.corteFriccion = 11000;
+    this.bocaPrevia = 1;
+    this.envExplosion = 0;
     this.areaGlotisMedia = 0.5;
 
     this.plan = null;
@@ -237,17 +241,32 @@ export class BocaArtificial {
       if (iMin >= 32 && iMin <= 37) dientes = friccion * 0.25;
       // Labiodental (f): el labio inferior roza los dientes de arriba.
       if (iMin >= 40) dientes = friccion * 1.4;
-      this.iDientes = iMin >= 40 ? N - 1 : INDICE_DIENTES; // en la /f/ el roce es en el labio
       if (p.flujoBoca < 0) friccion *= 0.3; // inhalar por la boca suena suave
+    }
+    // En los labios (/p/, /f/, /β/) el ruido nace en la salida y va directo al aire.
+    this.labial = iMin >= 40;
+    // Color del ruido según el lugar: cuanto más atrás, más grave
+    // (la cavidad delante del estrechamiento es más larga).
+    const corte = iMin <= 26 ? 2600 : iMin <= 31 ? 4200 : 11000;
+    if (corte !== this.corteFriccion) {
+      this.corteFriccion = corte;
+      this.friccionLP.fijarPasaBajos(this.sr, corte, 0.8);
     }
 
     // Explosión: al abrir un cierre, la presión acumulada sale de golpe.
-    const caida = this.pBocaPrevia - p.pBoca;
-    this.pBocaPrevia = p.pBoca;
-    if (caida > 0.3 && boca > 0) friccion += clamp(caida * 0.25, 0, 0.8);
+    // Se dispara en el instante en que un cierre se abre con presión dentro,
+    // y se apaga en ~10 ms.
+    if (this.bocaPrevia === 0 && boca > 0 && p.pBoca > 1.5) {
+      this.envExplosion = Math.max(this.envExplosion, clamp(p.pBoca / 8, 0, 1));
+    }
+    this.bocaPrevia = boca;
+    // al soltar hacia un canal estrecho (africada /ch/) la explosión es menor
+    const explosion = this.envExplosion * Math.sqrt(clamp(boca / 0.12, 0, 1));
+    // si la apertura es lenta (/k/), la presión tarda más en escapar
+    this.envExplosion *= Math.exp((-dt / 0.01) * clamp(boca / 0.12, 0.15, 1));
 
     this.ampPrev = { ...this.amp };
-    this.amp = { voz, aspiracion, friccion, dientes };
+    this.amp = { voz, aspiracion, friccion, dientes, explosion };
     // El ruido nace donde el chorro choca con el tubo ya ensanchado.
     let iRuido = iMin;
     if (iMin >= 0) {
@@ -281,6 +300,7 @@ export class BocaArtificial {
       const asp = a0.aspiracion + (a1.aspiracion - a0.aspiracion) * t;
       const fri = a0.friccion + (a1.friccion - a0.friccion) * t;
       const die = a0.dientes + (a1.dientes - a0.dientes) * t;
+      const exp = a0.explosion + (a1.explosion - a0.explosion) * t;
 
       const { deriv, flujo } = glot.muestra(f0, voz, this.actual.aduccion);
       // Glotis abierta: el sonido se escapa hacia la tráquea (rebota menos).
@@ -294,17 +314,18 @@ export class BocaArtificial {
       const voz0 = this.fuenteLP.paso(deriv);
       const fuente = voz0 + this.pecho.paso(voz0) * res * 0.12 + ruidoAsp * 0.15;
 
-      const blanco = this.ruidoHP.paso(this.ruido.blanco());
-      const ruidoF = blanco * fri * 0.022;
-      const labial = this.iDientes === N - 1;
-      // en la /f/ el ruido nace en el labio y sale directo al aire
-      const ruidoD = labial ? 0 : blanco * die * 0.034;
-      const ruidoLabial = labial ? blanco * die * 0.012 : 0;
+      const blanco = this.friccionLP.paso(this.ruidoHP.paso(this.ruido.blanco()));
+      const labial = this.labial;
+      // explosión: ruido ancho (sin el filtro de lugar), breve y fuerte
+      const chasquido = this.ruidoHP.x1 * exp;
+      const ruidoF = labial ? 0 : blanco * fri * 0.016 + chasquido * 0.03;
+      const ruidoD = labial ? 0 : this.dientesHP.paso(blanco) * die * 0.03; // silbido agudo contra los dientes
+      const ruidoLabial = labial ? blanco * (fri * 0.006 + die * 0.012) + chasquido * 0.02 : 0;
 
-      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, this.iDientes);
+      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, INDICE_DIENTES);
       let labios = tr.salidaLabios;
       let nariz = tr.salidaNariz;
-      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, this.iDientes);
+      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, INDICE_DIENTES);
       labios = 0.5 * (labios + tr.salidaLabios);
       nariz = 0.5 * (nariz + tr.salidaNariz);
 
@@ -349,7 +370,7 @@ export class BocaArtificial {
       diafragma: p.diafragma,
       intercostalesExt: p.intercostalesExt,
       intercostalesInt: p.intercostalesInt,
-      friccion: this.amp.friccion + this.amp.dientes,
+      friccion: this.amp.friccion + this.amp.dientes + this.amp.explosion,
       iFriccion: this.iEstrechez,
       respiracion: this.respiracion,
       etiqueta: this.etiqueta,

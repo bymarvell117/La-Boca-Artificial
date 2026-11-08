@@ -65,11 +65,13 @@ export function planificar(texto, opciones = {}) {
         // Golpes de la punta contra los alvéolos.
         const golpes = def.golpes || 1;
         const paso = dur / golpes;
+        // contacto más largo que la separación: la punta tiene que llegar a cerrar
+        const cierre = golpes === 1 ? 0.75 : 0.6;
         for (let k = 0; k < golpes; k++) {
-          ev({ ...objetivos, puntaApertura: 0 }, x.f);
-          t += paso * 0.5;
+          ev({ ...objetivos, puntaApertura: -0.6 }, x.f);
+          t += paso * cierre;
           ev({ puntaApertura: 0.7 });
-          t += paso * 0.5;
+          t += paso * (1 - cierre);
         }
         return;
       }
