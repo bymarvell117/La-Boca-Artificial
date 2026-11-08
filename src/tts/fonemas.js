@@ -35,11 +35,11 @@ export const FONEMAS = {
 
   // Oclusivas: cierre y luego explosión al abrir (la explosión sale sola de
   // la presión acumulada en la boca).
-  p: { tipo: 'oclusiva', dur: 85, o: { labios: -0.3, velo: 0, aduccion: SORDA } },
+  p: { tipo: 'oclusiva', dur: 85, vot: 10, o: { labios: -0.3, velo: 0, aduccion: SORDA } },
   b: { tipo: 'oclusiva', dur: 65, o: { labios: -0.3, velo: 0, aduccion: SONORA } },
-  t: { tipo: 'oclusiva', dur: 80, o: { puntaPos: 37, puntaApertura: -0.6, velo: 0, aduccion: SORDA } },
+  t: { tipo: 'oclusiva', dur: 80, vot: 15, o: { puntaPos: 37, puntaApertura: -0.6, velo: 0, aduccion: SORDA } },
   d: { tipo: 'oclusiva', dur: 60, o: { puntaPos: 37, puntaApertura: -0.6, velo: 0, aduccion: SONORA } },
-  k: { tipo: 'oclusiva', dur: 85, o: { lenguaPos: 24, lenguaAltura: -0.12, velo: 0, aduccion: SORDA } },
+  k: { tipo: 'oclusiva', dur: 85, vot: 32, o: { lenguaPos: 24, lenguaAltura: -0.12, velo: 0, aduccion: SORDA } },
   g: { tipo: 'oclusiva', dur: 65, o: { lenguaPos: 24, lenguaAltura: -0.12, velo: 0, aduccion: SONORA } },
 
   // Aproximantes (b, d, g suaves entre vocales)
@@ -50,7 +50,7 @@ export const FONEMAS = {
 
   // Fricativas
   f: { tipo: 'fricativa', dur: 100, o: { labios: 0.1, velo: 0, aduccion: SORDA } },
-  s: { tipo: 'fricativa', dur: 105, o: { puntaPos: 35, puntaApertura: 0.12, mandibula: 0.1, velo: 0, aduccion: SORDA } },
+  s: { tipo: 'fricativa', dur: 105, o: { puntaPos: 36, puntaApertura: 0.12, mandibula: 0.1, velo: 0, aduccion: SORDA } },
   θ: { tipo: 'fricativa', dur: 100, o: { puntaPos: 38, puntaApertura: 0.13, mandibula: 0.15, velo: 0, aduccion: SORDA } },
   x: { tipo: 'fricativa', dur: 95, o: { lenguaPos: 23, lenguaAltura: 0.06, mandibula: 0.25, velo: 0, aduccion: SORDA } },
   ʝ: { tipo: 'fricativa', dur: 70, o: { lenguaPos: 30, lenguaAltura: 0.12, mandibula: 0.2, puntaApertura: 3, velo: 0, aduccion: SONORA } },

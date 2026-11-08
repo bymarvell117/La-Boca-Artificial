@@ -73,11 +73,19 @@ export class BocaArtificial {
     this.fuenteLP = Biquad.pasaBajos(sr, 4200, 0.6);
     this.aspLP = Biquad.pasaBajos(sr, 2800, 0.7);
     this.friccionLP = Biquad.pasaBajos(sr, 11000, 0.8);
-    this.dientesHP = Biquad.pasaAltos(sr, 3800, 0.7); // la aspiración real es grave-media
+    this.dientesHP = Biquad.pasaAltos(sr, 3800, 0.7);
+    // /s/: silbido contra los dientes, con casi toda la energía entre 4 y 10 kHz
+    this.sibilanteHP1 = Biquad.pasaAltos(sr, 4300, 1.1);
+    this.sibilanteHP2 = Biquad.pasaAltos(sr, 3600, 0.7);
+    this.sibilante = false;
+    // explosión de las oclusivas: su color depende del lugar del cierre
+    this.explosionFiltro = Biquad.pasaAltos(sr, 3500, 0.9);
+    this.gananciaExplosion = 1;
+    this.iCierre = -1;
     this.salidaHP = Biquad.pasaAltos(sr, 85, 0.7);
     this.estante = Biquad.estanteGraves(sr, 320, -5);
-    this.salidaLP1 = Biquad.pasaBajos(sr, 8500, 0.54);
-    this.salidaLP2 = Biquad.pasaBajos(sr, 8500, 1.31);
+    this.salidaLP1 = Biquad.pasaBajos(sr, 11000, 0.54);
+    this.salidaLP2 = Biquad.pasaBajos(sr, 11000, 1.31);
 
     // Cajas de resonancia: senos paranasales (maxilar, frontal) y pecho.
     this.senoMaxilar = new Resonador(sr, 520, 4);
@@ -238,7 +246,9 @@ export class BocaArtificial {
       const vel = Math.abs(p.flujoBoca) / boca; // L/s por cm²  (×10 = m/s)
       friccion = clamp(1.8 * (vel * vel - 1.0) * Math.sqrt(boca), 0, 1.2) * suave(0.6, 0.05, boca);
       // Sibilantes: la punta lanza el chorro contra los dientes.
-      if (iMin >= 32 && iMin <= 37) dientes = friccion * 0.25;
+      // /s/ (punta en los alvéolos): el chorro choca con los dientes y silba.
+      // /ʃ/ de la ch (más atrás): resuena en la cavidad de delante, más grave.
+      if (iMin >= 35 && iMin <= 37) dientes = friccion * 1.0;
       // Labiodental (f): el labio inferior roza los dientes de arriba.
       if (iMin >= 40) dientes = friccion * 1.4;
       if (p.flujoBoca < 0) friccion *= 0.3; // inhalar por la boca suena suave
@@ -247,7 +257,7 @@ export class BocaArtificial {
     this.labial = iMin >= 40;
     // Color del ruido según el lugar: cuanto más atrás, más grave
     // (la cavidad delante del estrechamiento es más larga).
-    const corte = iMin <= 26 ? 2600 : iMin <= 31 ? 4200 : 11000;
+    const corte = iMin <= 26 ? 2600 : iMin <= 31 ? 4200 : iMin <= 34 ? 5200 : 11000;
     if (corte !== this.corteFriccion) {
       this.corteFriccion = corte;
       this.friccionLP.fijarPasaBajos(this.sr, corte, 0.8);
@@ -256,14 +266,18 @@ export class BocaArtificial {
     // Explosión: al abrir un cierre, la presión acumulada sale de golpe.
     // Se dispara en el instante en que un cierre se abre con presión dentro,
     // y se apaga en ~10 ms.
+    if (boca === 0) this.iCierre = iMin; // dónde está cerrado
     if (this.bocaPrevia === 0 && boca > 0 && p.pBoca > 1.5) {
       this.envExplosion = Math.max(this.envExplosion, clamp(p.pBoca / 8, 0, 1));
+      this.colorearExplosion();
     }
     this.bocaPrevia = boca;
     // al soltar hacia un canal estrecho (africada /ch/) la explosión es menor
     const explosion = this.envExplosion * Math.sqrt(clamp(boca / 0.12, 0, 1));
     // si la apertura es lenta (/k/), la presión tarda más en escapar
     this.envExplosion *= Math.exp((-dt / 0.01) * clamp(boca / 0.12, 0.15, 1));
+
+    this.sibilante = iMin >= 35 && iMin <= 37 && boca > 0 && boca < 0.6;
 
     this.ampPrev = { ...this.amp };
     this.amp = { voz, aspiracion, friccion, dientes, explosion };
@@ -275,6 +289,30 @@ export class BocaArtificial {
     }
     this.iFriccion = iRuido;
     this.iEstrechez = iMin;
+  }
+
+  // El color de la explosión dice al oído dónde estaba el cierre:
+  //  labios (/p b/): suave y grave; punta (/t d/): aguda y fuerte;
+  //  dorso (/k g/): compacta, centrada en la resonancia de la vocal que sigue.
+  colorearExplosion() {
+    const i = this.iCierre;
+    let f;
+    if (i >= 40) {
+      f = Biquad.pasaBajos(this.sr, 1500, 0.7);
+      this.gananciaExplosion = 0.55;
+    } else if (i >= 36) {
+      f = Biquad.pasaAltos(this.sr, 3300, 0.9);
+      this.gananciaExplosion = 1.1;
+    } else if (i >= 32) {
+      // postalveolar (/ch/): más oscura que la /t/
+      f = Biquad.pasaBanda(this.sr, 3200, 1.2);
+      this.gananciaExplosion = 0.9;
+    } else {
+      const fc = clamp(1100 + 90 * (this.objetivo.lenguaPos - 14), 1300, 3300);
+      f = Biquad.pasaBanda(this.sr, fc, 2.2);
+      this.gananciaExplosion = 2.2;
+    }
+    this.explosionFiltro.copiarCoeficientes(f);
   }
 
   // --- Audio -----------------------------------------------------------------
@@ -317,10 +355,13 @@ export class BocaArtificial {
       const blanco = this.friccionLP.paso(this.ruidoHP.paso(this.ruido.blanco()));
       const labial = this.labial;
       // explosión: ruido ancho (sin el filtro de lugar), breve y fuerte
-      const chasquido = this.ruidoHP.x1 * exp;
-      const ruidoF = labial ? 0 : blanco * fri * 0.016 + chasquido * 0.03;
-      const ruidoD = labial ? 0 : this.dientesHP.paso(blanco) * die * 0.03; // silbido agudo contra los dientes
-      const ruidoLabial = labial ? blanco * (fri * 0.006 + die * 0.012) + chasquido * 0.02 : 0;
+      const ruidoExplosion = this.explosionFiltro.paso(this.ruido.blanco()) * exp * this.gananciaExplosion * 0.05;
+      const sib = this.sibilante;
+      const ruidoF = labial ? 0 : blanco * fri * (sib ? 0.004 : 0.016);
+      const ruidoD = labial || sib ? 0 : this.dientesHP.paso(blanco) * die * 0.03;
+      // la /s/ silba en los dientes, a 1–2 cm de los labios: sale casi directa
+      const ruidoSilbido = sib ? this.sibilanteHP2.paso(this.sibilanteHP1.paso(blanco)) * die * 0.028 : 0;
+      const ruidoLabial = labial ? blanco * (fri * 0.004 + die * 0.005) : 0;
 
       tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, INDICE_DIENTES);
       let labios = tr.salidaLabios;
@@ -334,7 +375,7 @@ export class BocaArtificial {
 
       // La fuente LF ya es la derivada del flujo, que incluye el efecto de
       // radiación de los labios; aquí sólo se suman boca y nariz.
-      const sal = labios + nariz * 0.45 + ruidoLabial; // las narinas radian menos que la boca
+      const sal = labios + nariz * 0.45 + ruidoLabial + ruidoExplosion + ruidoSilbido; // las narinas radian menos que la boca
       // Radiación parcial: las aberturas pequeñas radian peor los graves.
       const rad = sal - this.radiacion * this.salidaPrevia;
       this.salidaPrevia = sal;

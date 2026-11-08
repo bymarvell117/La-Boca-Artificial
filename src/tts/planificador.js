@@ -76,6 +76,12 @@ export function planificar(texto, opciones = {}) {
         return;
       }
 
+      // Tras una oclusiva sorda la voz tarda en arrancar (VOT): más en la /k/.
+      const previo = FONEMAS[fon[i - 1]?.f];
+      if (previo?.vot && def.o.aduccion > 0.5) {
+        eventos.push({ t: t + previo.vot / 1000 / velocidad, objetivos: { aduccion: def.o.aduccion } });
+        objetivos.aduccion = previo.o.aduccion;
+      }
       ev(objetivos, x.f);
       if (def.suelta) {
         t += dur * 0.4;
@@ -103,6 +109,7 @@ export function planificar(texto, opciones = {}) {
   t += 0.08;
   ev(POSTURA_REPOSO, '');
   t += 0.4;
+  eventos.sort((a, b) => a.t - b.t); // orden estable: los del VOT caen en su sitio
   return { eventos, duracion: t };
 }
 
@@ -133,8 +140,15 @@ export function planificarFonema(f, opciones = {}) {
       ev(def.suelta);
       t += 0.08;
     }
-    ev(A, 'a');
-    t += 0.4;
+    if (def.vot) {
+      ev({ ...A, aduccion: def.o.aduccion }, 'a');
+      t += def.vot / 1000;
+      ev({ aduccion: A.aduccion });
+      t += 0.4 - def.vot / 1000;
+    } else {
+      ev(A, 'a');
+      t += 0.4;
+    }
   } else if (def.tipo === 'vibrante') {
     ev(A, 'a');
     t += 0.25;

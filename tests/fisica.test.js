@@ -154,3 +154,64 @@ test('/p t k/ explotan al soltar; /b/ suave no', () => {
   }
   assert.equal(Math.max(...seguir('aba').map((s) => s.explosion)), 0);
 });
+
+// Centro de gravedad del espectro (Hz) de un trozo de audio.
+function centroide(x, sr = SR) {
+  const n = 1024;
+  let num = 0;
+  let den = 0;
+  for (let k = 4; k < n / 2; k += 2) {
+    let re = 0;
+    let im = 0;
+    for (let i = 0; i < n; i++) {
+      const v = (x[i] || 0) * (0.5 - 0.5 * Math.cos((2 * Math.PI * i) / n));
+      re += v * Math.cos((2 * Math.PI * k * i) / n);
+      im -= v * Math.sin((2 * Math.PI * k * i) / n);
+    }
+    const m = re * re + im * im;
+    num += m * ((k * sr) / n);
+    den += m;
+  }
+  return num / den;
+}
+
+function grabar(palabra) {
+  const b = new BocaArtificial(SR);
+  const plan = planificar(palabra);
+  b.decir(plan);
+  const audio = [];
+  const etiquetas = [];
+  let disparo = -1;
+  const blk = new Float32Array(128);
+  for (let i = 0; i < Math.round((plan.duracion * SR) / 128); i++) {
+    b.procesar(blk);
+    audio.push(...blk);
+    etiquetas.push(b.etiqueta);
+    if (disparo < 0 && b.amp.explosion > 0.3) disparo = (i - 1) * 128;
+  }
+  return { audio, etiquetas, disparo };
+}
+
+test('cada oclusiva tiene su color: /p/ grave, /k/ media, /t/ aguda', () => {
+  const c = {};
+  for (const p of ['apa', 'aka', 'ata']) {
+    const { audio, disparo } = grabar(p);
+    c[p] = centroide(audio.slice(disparo, disparo + 1024));
+  }
+  assert.ok(c.apa < c.aka && c.aka < c.ata, JSON.stringify(c));
+});
+
+test('la /s/ silba en los agudos y la /ch/ y la jota quedan más graves', () => {
+  const medio = (p, f) => {
+    const { audio, etiquetas } = grabar(p);
+    const i = etiquetas.indexOf(f);
+    const j = etiquetas.lastIndexOf(f);
+    const m = Math.floor((i + (j - i) * 0.7) * 128);
+    return centroide(audio.slice(m - 512, m + 512));
+  };
+  const s = medio('asa', 's');
+  const ch = medio('acha', 'tʃ');
+  const x = medio('aja', 'x');
+  assert.ok(s > 5000, `s ${s}`);
+  assert.ok(s > ch && ch > x, `s ${s} ch ${ch} x ${x}`);
+});

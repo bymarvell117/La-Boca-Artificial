@@ -74,6 +74,21 @@ export class Biquad {
     const al = Math.sin(w) / (2 * q);
     return new Biquad((1 + c) / 2, -(1 + c), (1 + c) / 2, 1 + al, -2 * c, 1 - al);
   }
+  // Paso-banda con ganancia 1 en el centro.
+  static pasaBanda(sr, fc, q) {
+    const w = (2 * Math.PI * fc) / sr;
+    const c = Math.cos(w);
+    const al = Math.sin(w) / (2 * q);
+    return new Biquad(al, 0, -al, 1 + al, -2 * c, 1 - al);
+  }
+  // Copia los coeficientes de otro filtro sin perder el estado (sin chasquidos).
+  copiarCoeficientes(n) {
+    this.b0 = n.b0;
+    this.b1 = n.b1;
+    this.b2 = n.b2;
+    this.a1 = n.a1;
+    this.a2 = n.a2;
+  }
   // Baja (o sube) los graves por debajo de fc, en dB.
   static estanteGraves(sr, fc, db) {
     const A = Math.pow(10, db / 40);
