@@ -134,13 +134,72 @@ button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-
   max-height: 960px;
 }
 #lienzo { width: 100%; height: 100%; display: block; }
-.interruptor {
+.vista3d { position: absolute; inset: 0; overflow: hidden; border-radius: 14px; }
+.vista3d canvas { display: block; touch-action: none; cursor: grab; }
+.vista3d canvas:active { cursor: grabbing; }
+.nombres3d { position: absolute; inset: 0; pointer-events: none; }
+.nombres3d span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-size: 12px;
+  line-height: 1;
+  padding: 3px 6px;
+  border-radius: 6px;
+  white-space: nowrap;
+  color: var(--texto);
+  background: color-mix(in srgb, var(--lienzo) 78%, transparent);
+  border: 1px solid var(--borde);
+  margin: -9px 0 0 6px;
+}
+.nombres3d span::before {
+  content: "";
+  position: absolute;
+  left: -9px;
+  top: 6px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--acento);
+}
+.fonema3d {
+  position: absolute;
+  right: 18px;
+  top: 56px;
+  font: 700 42px/1 system-ui, sans-serif;
+  color: var(--acento);
+  pointer-events: none;
+}
+.barra-vista {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: space-between;
+  pointer-events: none;
+}
+.segmentado { display: inline-flex; pointer-events: auto; border: 1px solid var(--borde); border-radius: 8px; overflow: hidden; background: var(--superficie); }
+.segmentado button { border: none; border-radius: 0; padding: 5px 10px; font-size: 13px; }
+.segmentado button + button { border-left: 1px solid var(--borde); }
+.segmentado button[aria-pressed="true"] { background: var(--acento); color: var(--acento-texto); }
+.interruptores {
   position: absolute;
   left: 12px;
+  right: 12px;
   bottom: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
   font-size: 13px;
   color: var(--texto-suave);
+  pointer-events: none;
 }
+.interruptores label { pointer-events: auto; }
+.interruptores .ayuda { margin-left: auto; }
+.escena.modo2d .opciones3d { display: none; }
 
 .panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 

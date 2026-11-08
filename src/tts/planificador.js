@@ -89,7 +89,7 @@ export function planificar(texto, opciones = {}) {
     const final = '.!?'.includes(g.fin);
     const ultimo = gi === grupos.length - 1;
     if (ultimo) return;
-    ev({ aduccion: 0.35, puntaApertura: 3 }, '');
+    ev({ respiracion: 'pausa', aduccion: 0.35, puntaApertura: 3 }, '');
     t += final ? 0.12 : 0.18;
     if (final) {
       ev(INSPIRAR, 'inspira');
@@ -97,7 +97,7 @@ export function planificar(texto, opciones = {}) {
     }
   });
 
-  ev({ aduccion: 0.35 }, '');
+  ev({ respiracion: 'pausa', aduccion: 0.35 }, '');
   t += 0.08;
   ev(POSTURA_REPOSO, '');
   t += 0.4;

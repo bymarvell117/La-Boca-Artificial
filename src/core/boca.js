@@ -95,7 +95,8 @@ export class BocaArtificial {
     this.etiqueta = '';
     this.tiempo = 0;
     this.nivel = 0;
-    this.ganancia = 4.5;
+    this.ganancia = 11;
+    this.radiacion = 0.5;
     this.salidaPrevia = 0;
 
     this.actualizarGeometria();
@@ -141,10 +142,11 @@ export class BocaArtificial {
 
   // --- Física por bloque ---------------------------------------------------
 
-  actualizarGeometria() {
+  // pasos: en cuántos pasos del tracto se llega a la nueva forma
+  actualizarGeometria(pasos = 0) {
     diametrosTracto(this.actual, this.dTracto);
     diametrosNariz(this.actual.velo, this.dNariz);
-    this.tracto.fijarDiametros(this.dTracto, this.dNariz);
+    this.tracto.fijarDiametros(this.dTracto, this.dNariz, pasos);
   }
 
   bloqueControl(dt) {
@@ -158,7 +160,7 @@ export class BocaArtificial {
       a[k] += (o[k] - a[k]) * f;
       if (Math.abs(o[k] - a[k]) < 0.004) a[k] = o[k];
     }
-    this.actualizarGeometria();
+    this.actualizarGeometria(Math.round(dt * this.sr) * 2);
 
     // Estrechamientos de cada vía de aire.
     const d = this.dTracto;
@@ -209,7 +211,7 @@ export class BocaArtificial {
 
     // Aspiración (aire turbulento en la glotis): más con la glotis abierta.
     const velGlotis = Math.abs(p.flujoGlotis) / Math.max(0.05, this.areaGlotisMedia);
-    const aspiracion = clamp(velGlotis * 0.05, 0, 0.6) * (1 - 0.7 * juntas) + 0.04 * voz;
+    const aspiracion = clamp(velGlotis * 0.05, 0, 0.6) * (1 - 0.7 * juntas) + 0.012 * voz;
 
     // Fricación: turbulencia en el punto más estrecho de la boca.
     let friccion = 0;
@@ -217,7 +219,7 @@ export class BocaArtificial {
     if (boca > 0 && boca < 0.6) {
       // Turbulencia: crece con la velocidad² del chorro y con su grosor.
       const vel = Math.abs(p.flujoBoca) / boca; // L/s por cm²  (×10 = m/s)
-      friccion = clamp(1.8 * (vel * vel - 0.5) * Math.sqrt(boca), 0, 1.2) * suave(0.6, 0.05, boca);
+      friccion = clamp(1.8 * (vel * vel - 1.0) * Math.sqrt(boca), 0, 1.2) * suave(0.6, 0.05, boca);
       // Sibilantes: la punta lanza el chorro contra los dientes.
       if (iMin >= 32 && iMin <= 37) dientes = friccion * 0.25;
       // Labiodental (f): el labio inferior roza los dientes de arriba.
@@ -228,7 +230,7 @@ export class BocaArtificial {
     // Explosión: al abrir un cierre, la presión acumulada sale de golpe.
     const caida = this.pBocaPrevia - p.pBoca;
     this.pBocaPrevia = p.pBoca;
-    if (caida > 0.3 && boca > 0) friccion += clamp(caida * 0.5, 0, 1.5);
+    if (caida > 0.3 && boca > 0) friccion += clamp(caida * 0.25, 0, 0.8);
 
     this.ampPrev = { ...this.amp };
     this.amp = { voz, aspiracion, friccion, dientes };
@@ -267,6 +269,8 @@ export class BocaArtificial {
       const die = a0.dientes + (a1.dientes - a0.dientes) * t;
 
       const { deriv, flujo } = glot.muestra(f0, voz, this.actual.aduccion);
+      // Glotis abierta: el sonido se escapa hacia la tráquea (rebota menos).
+      tr.reflexGlotis = 0.92 - 0.3 * glot.apertura - 0.45 * apertura * apertura;
 
       // Aspiración modulada por el ciclo glotal, coloreada por la tráquea.
       let ruidoAsp = this.aspHP.paso(this.ruido.blanco()) * asp * (0.4 + 0.6 * (voz > 0.05 ? flujo : 1));
@@ -289,12 +293,14 @@ export class BocaArtificial {
       // Senos paranasales: cavidades que resuenan con el sonido nasal.
       nariz += (this.senoMaxilar.paso(nariz) + this.senoFrontal.paso(nariz)) * res * 0.6;
 
-      // Radiación: al salir al aire libre el sonido gana agudos (≈ derivada).
+      // La fuente LF ya es la derivada del flujo, que incluye el efecto de
+      // radiación de los labios; aquí sólo se suman boca y nariz.
       const sal = labios + nariz * 0.45; // las narinas radian menos que la boca
-      const radiado = sal - 0.97 * this.salidaPrevia;
+      // Radiación parcial: las aberturas pequeñas radian peor los graves.
+      const rad = sal - this.radiacion * this.salidaPrevia;
       this.salidaPrevia = sal;
 
-      let s = this.dcBloqueo.paso(radiado) * this.ganancia;
+      let s = this.dcBloqueo.paso(rad) * this.ganancia;
       s = Math.tanh(s); // limitador suave
       salida[i] = s;
       energia += s * s;

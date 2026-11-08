@@ -6,6 +6,9 @@
   <title>La Boca Artificial</title>
   <meta name="description" content="Simulador del aparato fonador humano: respira, vibra y habla en español.">
   <link rel="stylesheet" href="estilos.css">
+  <script type="importmap">
+    { "imports": { "three": "./vendor/three.module.min.js" } }
+  </script>
 </head>
 <body>
   <header class="cabecera">
@@ -15,9 +18,27 @@
   </header>
 
   <main class="disposicion">
-    <section class="escena" aria-label="Corte de perfil del aparato fonador">
-      <canvas id="lienzo"></canvas>
-      <label class="interruptor"><input type="checkbox" id="nombres" checked> Mostrar nombres</label>
+    <section class="escena" aria-label="Aparato fonador en 3D">
+      <div id="escena3d" class="vista3d"></div>
+      <canvas id="lienzo" hidden></canvas>
+      <div class="barra-vista">
+        <div class="segmentado" role="group" aria-label="Vista">
+          <button data-vista="3d" aria-pressed="true">3D</button>
+          <button data-vista="2d" aria-pressed="false">Corte 2D</button>
+        </div>
+        <div class="segmentado opciones3d" role="group" aria-label="Encuadre">
+          <button data-encuadre="general">Todo</button>
+          <button data-encuadre="cabeza">Cabeza</button>
+          <button data-encuadre="perfil">Perfil</button>
+          <button data-encuadre="frente">Frente</button>
+        </div>
+      </div>
+      <div class="interruptores">
+        <label><input type="checkbox" id="nombres" checked> Nombres</label>
+        <label class="opciones3d"><input type="checkbox" id="piel" checked> Piel</label>
+        <label class="opciones3d"><input type="checkbox" id="corte"> Cortar por la mitad</label>
+        <span class="ayuda opciones3d">Arrastra para girar · rueda para acercar</span>
+      </div>
     </section>
 
     <aside class="panel">

@@ -3,6 +3,7 @@
 import { BocaArtificial } from './core/boca.js';
 import { tensionAFrecuencia } from './core/glotis.js';
 import { Dibujo } from './ui/dibujo.js';
+import { Escena3D } from './ui/escena3d.js';
 import { planificar, planificarFonema } from './tts/planificador.js';
 import { transcribir } from './tts/texto-a-fonemas.js';
 import { GRUPOS_BOTONES, EJEMPLO } from './tts/fonemas.js';
@@ -10,6 +11,30 @@ import { GRUPOS_BOTONES, EJEMPLO } from './tts/fonemas.js';
 const $ = (id) => document.getElementById(id);
 
 const dibujo = new Dibujo($('lienzo'));
+let escena3d = null;
+try {
+  escena3d = new Escena3D($('escena3d'));
+} catch (err) {
+  console.error(err);
+}
+let vista = escena3d ? '3d' : '2d';
+
+function fijarVista(v) {
+  vista = v;
+  $('escena3d').hidden = v !== '3d';
+  $('lienzo').hidden = v !== '2d';
+  document.querySelector('.escena').classList.toggle('modo2d', v === '2d');
+  document.querySelectorAll('[data-vista]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.vista === v));
+  if (v === '2d') dibujo.ajustar();
+  else escena3d?.ajustar();
+}
+document.querySelectorAll('[data-vista]').forEach((b) =>
+  b.addEventListener('click', () => (b.dataset.vista === '3d' && !escena3d ? avisar('Tu navegador no permite 3D (WebGL).') : fijarVista(b.dataset.vista))),
+);
+document.querySelectorAll('[data-encuadre]').forEach((b) => b.addEventListener('click', () => escena3d?.vista(b.dataset.encuadre)));
+$('piel').addEventListener('change', (e) => escena3d?.fijarPiel(e.target.checked));
+$('corte').addEventListener('change', (e) => escena3d?.fijarCorte(e.target.checked));
+fijarVista(vista);
 let nodo = null;
 let contexto = null;
 
@@ -179,9 +204,9 @@ for (const g of CONTROLES) {
 const volumen = document.createElement('input');
 volumen.type = 'range';
 volumen.min = 0;
-volumen.max = 15;
+volumen.max = 30;
 volumen.step = 0.1;
-volumen.value = 4.5;
+volumen.value = 11;
 {
   const caja = document.createElement('div');
   caja.className = 'grupo';
@@ -227,7 +252,10 @@ for (const [k, nombre] of MEDIDORES) {
   celdas[k] = d.querySelector('strong');
 }
 
-$('nombres').addEventListener('change', (e) => (dibujo.mostrarNombres = e.target.checked));
+$('nombres').addEventListener('change', (e) => {
+  dibujo.mostrarNombres = e.target.checked;
+  if (escena3d) escena3d.mostrarNombres = e.target.checked;
+});
 
 // ---------- Bucle de dibujo ----------
 let cuadro = 0;
@@ -238,7 +266,8 @@ function bucle() {
     for (let i = 0; i < 6; i++) local.procesar(blk);
     estado = local.instantanea();
   }
-  dibujo.dibujar(estado);
+  if (vista === '3d') escena3d.dibujar(estado);
+  else dibujo.dibujar(estado);
   if (++cuadro % 4 === 0) {
     for (const [k, , f] of MEDIDORES) celdas[k].textContent = f(estado);
     sincronizarControles(estado);

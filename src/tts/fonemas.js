@@ -12,11 +12,11 @@ const SORDA = 0.3;
 // Posturas de vocales ajustadas para dar formantes del español
 // (F1/F2 aprox. a 720/1250, e 460/1850, i 300/2250, o 480/920, u 330/780 Hz).
 export const VOCALES = {
-  a: { lenguaPos: 12, lenguaAltura: 0.5, labios: 0.8, mandibula: 0.8 },
-  e: { lenguaPos: 26, lenguaAltura: 0.5, labios: 1.0, mandibula: 0.45 },
-  i: { lenguaPos: 31, lenguaAltura: 0.35, labios: 0.6, mandibula: 0.2 },
-  o: { lenguaPos: 20, lenguaAltura: 0.5, labios: 0.35, mandibula: 0.5 },
-  u: { lenguaPos: 17, lenguaAltura: 0.45, labios: 0.25, mandibula: 0.2 },
+  a: { lenguaPos: 9, lenguaAltura: 0.35, labios: 1.0, mandibula: 0.7 },
+  e: { lenguaPos: 29, lenguaAltura: 0.6, labios: 0.8, mandibula: 0.5 },
+  i: { lenguaPos: 29, lenguaAltura: 0.3, labios: 1.0, mandibula: 0.2 },
+  o: { lenguaPos: 18, lenguaAltura: 0.4, labios: 0.45, mandibula: 0.5 },
+  u: { lenguaPos: 21, lenguaAltura: 0.4, labios: 0.25, mandibula: 0.25 },
 };
 
 const NEUTRO_PUNTA = { puntaApertura: 3, puntaPos: 36 };

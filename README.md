@@ -1,6 +1,6 @@
 # La Boca Artificial
 
-Un aparato fonador humano simulado en el navegador. No reproduce voces grabadas:
+Un aparato fonador humano simulado en el navegador, en **3D**. No reproduce voces grabadas:
 el sonido nace de la física del aire que sale de los pulmones, hace vibrar las
 cuerdas vocales y resuena en la garganta, la boca y la nariz. Lo que se oye
 depende de cómo se mueven la lengua, los labios, el velo y la mandíbula.
@@ -34,7 +34,14 @@ Necesitas [Node.js](https://nodejs.org) 18 o más reciente (sólo para el servid
 node servidor.js
 ```
 
-Abre <http://localhost:8080> y pulsa **Encender sonido**. Hay tres formas de controlarla:
+Abre <http://localhost:8080> y pulsa **Encender sonido**.
+
+**Vista 3D**: arrastra para girar el cuerpo y usa la rueda (o pellizca) para acercar.
+Los botones *Todo*, *Cabeza*, *Perfil* y *Frente* cambian el encuadre. *Cortar por la
+mitad* muestra el interior en corte sagital y *Piel* oculta la piel translúcida.
+La vista *Corte 2D* sigue disponible.
+
+Hay tres formas de controlarla:
 
 - **Hablar**: escribe un texto en español y pulsa *Hablar*. Puedes elegir voz grave, media o aguda, la velocidad y el acento (Latinoamérica o España).
 - **Fonemas**: botones para cada sonido del español (/a/, /p/, /s/, /m/, /r/…).
@@ -54,7 +61,7 @@ pulmones ─► tráquea ─► laringe/cuerdas ─► faringe ─┬─► boca
 - `src/core/` — la física, igual en el navegador y en Node:
   - `anatomia.js`: dónde está cada órgano y cómo los articuladores dan los diámetros del tubo.
   - `tracto.js`: guía de ondas de Kelly-Lochbaum (44 tramos de tracto + 28 de nariz).
-  - `glotis.js`: cuerdas vocales.
+  - `glotis.js`: cuerdas vocales con el modelo LF (Liljencrants-Fant) del pulso glotal.
   - `pulmones.js`: respiración y aerodinámica (presión en pulmones y boca, flujos por boca y nariz).
   - `boca.js`: une todo; turbulencia, explosiones de las oclusivas y cajas de resonancia.
 - `src/tts/` — TTS mecánico:
@@ -62,7 +69,9 @@ pulmones ─► tráquea ─► laringe/cuerdas ─► faringe ─┬─► boca
   - `fonemas.js`: la postura de los órganos para cada fonema. Las vocales están ajustadas a los formantes del español.
   - `planificador.js`: duraciones, entonación (pregunta, afirmación), pausas y respiración.
 - `src/audio/procesador.js` — AudioWorklet que corre la simulación en tiempo real.
-- `src/ui/dibujo.js` — el corte de perfil animado y la vista de las cuerdas vocales desde arriba.
+- `src/ui/escena3d.js` — el cuerpo en 3D (Three.js): tubo de aire, lengua, velo, mandíbula, labios, dientes, nariz y senos, laringe, tráquea, pulmones, costillas, intercostales y diafragma, todo movido por la simulación.
+- `src/ui/dibujo.js` — el corte de perfil 2D y la vista de las cuerdas vocales desde arriba.
+- `vendor/` — Three.js 0.170 (licencia MIT), incluido para que funcione sin internet.
 
 Muchas cosas del habla salen solas de la física, sin programarlas aparte. Por
 ejemplo, en una /b/ la boca cerrada se llena de aire y la vibración se apaga
@@ -75,8 +84,8 @@ npm test
 ```
 
 Comprueban las reglas de pronunciación, la entonación, los formantes de las
-vocales y la física (presión en las oclusivas, aire por la nariz en /m/,
-estabilidad numérica).
+vocales y su nitidez (ancho de banda), y la física (presión en las oclusivas,
+aire por la nariz en /m/, estabilidad numérica).
 
 ## Próximos pasos
 

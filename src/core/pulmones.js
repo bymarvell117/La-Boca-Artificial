@@ -37,7 +37,7 @@ export class Pulmones {
     this.intercostalesInt = 0; // bajan las costillas (espiran)
 
     // Control automático
-    this.modo = 'tranquila'; // tranquila | habla | inspirar | manual
+    this.modo = 'tranquila'; // tranquila | habla | pausa | inspirar | manual
     this.presionObjetivo = 7;
     this.cicloT = 0;
   }
@@ -55,6 +55,9 @@ export class Pulmones {
     if (this.modo === 'habla') {
       // Mantener una presión estable para hablar (lo que hace el cuerpo de verdad).
       pMus = this.presionObjetivo - rec;
+    } else if (this.modo === 'pausa') {
+      // Retener el aire: los músculos equilibran el retroceso (sin flujo).
+      pMus = -rec;
     } else if (this.modo === 'inspirar') {
       pMus = this.volumen < 4.2 ? -22 : -rec;
     } else {

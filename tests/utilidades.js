@@ -37,7 +37,7 @@ export function formantes(articuladores, sr = 48000, cuantos = 3) {
   const dN = diametrosNariz(a.velo, new Float64Array(NARIZ_N));
   const t = new Tracto();
   t.fijarDiametros(dT, dN);
-  const n = 16384;
+  const n = 8192;
   const re = new Float64Array(n), im = new Float64Array(n);
   for (let i = 0; i < n; i++) {
     t.paso(i === 0 ? 1 : 0, 0, -1, 0, 0);
@@ -58,4 +58,29 @@ export function formantes(articuladores, sr = 48000, cuantos = 3) {
     }
   }
   return picos.slice(0, cuantos);
+}
+
+// Ancho de banda (-3 dB) del primer formante.
+export function anchoBandaF1(articuladores, sr = 48000) {
+  const a = { ...REPOSO, ...articuladores };
+  const t = new Tracto();
+  t.fijarDiametros(diametrosTracto(a, new Float64Array(N)), diametrosNariz(a.velo, new Float64Array(NARIZ_N)));
+  const n = 32768;
+  const re = new Float64Array(n), im = new Float64Array(n);
+  for (let i = 0; i < n; i++) {
+    t.paso(i === 0 ? 1 : 0, 0, -1, 0, 0);
+    let s = t.salidaLabios;
+    t.paso(0, 0, -1, 0, 0);
+    re[i] = s + t.salidaLabios;
+  }
+  fft(re, im);
+  const df = sr / n;
+  const m = [];
+  for (let i = 0; i < n / 2; i++) m.push(20 * Math.log10(Math.hypot(re[i], im[i]) + 1e-12));
+  let pk = Math.round(200 / df);
+  for (let i = pk; i < Math.round(1000 / df); i++) if (m[i] > m[pk]) pk = i;
+  let lo = pk, hi = pk;
+  while (lo > 0 && m[lo] > m[pk] - 3) lo--;
+  while (m[hi] > m[pk] - 3) hi++;
+  return Math.round((hi - lo) * df);
 }

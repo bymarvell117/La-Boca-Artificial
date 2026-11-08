@@ -48,7 +48,8 @@ export function diametroBase(i, mandibula) {
 // `out` es un Float64Array(N).
 export function diametrosTracto(a, out) {
   const jaw = a.mandibula;
-  const lenguaMin = a.lenguaAltura + 0.25 * jaw;
+  // La mandíbula abierta separa la lengua del paladar, salvo en un cierre total.
+  const lenguaMin = a.lenguaAltura + 0.25 * jaw * Math.min(1, a.lenguaAltura / 0.3);
   for (let i = 0; i < N; i++) {
     let d = diametroBase(i, jaw);
 
@@ -66,7 +67,7 @@ export function diametrosTracto(a, out) {
     if (a.puntaApertura < 2.9 && i >= 30 && i <= 39) {
       const dist = (i - a.puntaPos) / 1.3;
       const w = Math.exp(-dist * dist);
-      const punta = a.puntaApertura + 0.25 * jaw;
+      const punta = a.puntaApertura + 0.25 * jaw * Math.min(1, a.puntaApertura / 0.3);
       const v = d * (1 - w) + Math.min(d, punta) * w;
       if (v < d) d = v;
     }

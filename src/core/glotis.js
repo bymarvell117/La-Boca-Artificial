@@ -1,21 +1,53 @@
 // Laringe y cuerdas vocales: generan el pulso de aire que hace vibrar el tracto.
 //
-// Usa un pulso de Rosenberg (flujo glotal) con jitter, shimmer y vibrato
-// suaves. Las cuerdas sólo vibran si están juntas (aducción) y si la
-// diferencia de presión entre pulmones y boca es suficiente.
+// Usa el modelo LF (Liljencrants-Fant) de la derivada del flujo glotal,
+// controlado por un solo parámetro Rd (Fant 1995): voz tensa ↔ voz relajada.
+// Incluye jitter, shimmer y vibrato suaves. Las cuerdas sólo vibran si están
+// juntas (aducción) y si hay presión suficiente entre pulmones y boca.
 
 export const tensionAFrecuencia = (t) => 70 * Math.pow(2, t * 3.5);
 export const frecuenciaATension = (f) => Math.log2(Math.max(70, f) / 70) / 3.5;
+
+// Parámetros de forma del pulso LF a partir de Rd (0.5 tensa … 2.7 soplada).
+export function formaLF(rd) {
+  rd = Math.min(2.7, Math.max(0.5, rd));
+  const ra = -0.01 + 0.048 * rd;
+  const rk = 0.224 + 0.118 * rd;
+  const rg = ((rk / 4) * (0.5 + 1.2 * rk)) / (0.11 * rd - ra * (0.5 + 1.2 * rk));
+  const ta = ra;
+  const tp = 1 / (2 * rg);
+  const te = tp + tp * rk;
+
+  const eps = 1 / ta;
+  const shift = Math.exp(-eps * (1 - te));
+  const delta = 1 - shift;
+  let integralRetorno = (1 / eps) * (shift - 1) + (1 - te) * shift;
+  integralRetorno /= delta;
+  const integralAbajo = -(te - tp) / 2 + integralRetorno;
+  const integralArriba = -integralAbajo;
+
+  const omega = Math.PI / tp;
+  const s = Math.sin(omega * te);
+  const y = (-Math.PI * s * integralArriba) / (tp * 2);
+  const alpha = Math.log(y) / (tp / 2 - te);
+  const e0 = -1 / (s * Math.exp(alpha * te));
+  return { te, tp, eps, shift, delta, omega, alpha, e0 };
+}
+
+// Derivada del flujo en la fase t (0..1) del periodo.
+export function ondaLF(f, t) {
+  if (t > f.te) return (-Math.exp(-f.eps * (t - f.te)) + f.shift) / f.delta;
+  return f.e0 * Math.exp(f.alpha * t) * Math.sin(f.omega * t);
+}
 
 export class Glotis {
   constructor(sr) {
     this.sr = sr;
     this.fase = 0;
     this.f0 = 120;
-    this.flujoPrevio = 0;
     this.apertura = 0; // 0..1, apertura instantánea (para el dibujo)
     this.amplitud = 0; // amplitud de vibración actual (suavizada)
-    this.cocienteAbierto = 0.6;
+    this.forma = formaLF(1.2);
     this.periodoJitter = 1;
     this.shimmer = 1;
     this.tVibrato = 0;
@@ -28,39 +60,33 @@ export class Glotis {
     return this.semilla / 4294967296;
   }
 
-  // Pulso de Rosenberg: flujo entre 0 y 1 dentro de un periodo.
-  static pulso(fase, oq) {
-    const tp = oq * 0.62; // apertura
-    const tn = oq - tp; // cierre
-    if (fase < tp) return 0.5 * (1 - Math.cos((Math.PI * fase) / tp));
-    if (fase < oq) return Math.cos((Math.PI * (fase - tp)) / (2 * tn));
-    return 0;
-  }
-
-  // Devuelve una muestra (derivada del flujo glotal, que es lo que se oye).
+  // Devuelve una muestra: `deriv` (derivada del flujo, lo que excita el
+  // tracto) y `flujo` (apertura, 0..1, para modular el ruido y dibujar).
   //  f0: frecuencia deseada; ampObjetivo: 0..1.5; aduccion: 0..1
   muestra(f0, ampObjetivo, aduccion) {
     const dt = 1 / this.sr;
     this.f0 += (f0 - this.f0) * 0.002;
-    this.amplitud += (ampObjetivo - this.amplitud) * 0.003;
+    this.amplitud += (ampObjetivo - this.amplitud) * 0.002;
 
     this.tVibrato += dt;
-    const vibrato = 1 + 0.006 * Math.sin(2 * Math.PI * 5.2 * this.tVibrato);
+    const vibrato = 1 + 0.005 * Math.sin(2 * Math.PI * 5.1 * this.tVibrato);
     const f = this.f0 * vibrato * this.periodoJitter;
 
     this.fase += f * dt;
     if (this.fase >= 1) {
       this.fase -= 1;
-      this.periodoJitter = 1 + (this.azar() - 0.5) * 0.012;
-      this.shimmer = 1 + (this.azar() - 0.5) * 0.06;
-      // Voz apretada: cierre más largo. Voz soplada: más abierta.
-      this.cocienteAbierto = Math.min(0.85, Math.max(0.4, 0.95 - 0.5 * aduccion));
+      this.periodoJitter = 1 + (this.azar() - 0.5) * 0.01;
+      this.shimmer = 1 + (this.azar() - 0.5) * 0.05;
+      // Cuerdas muy juntas → voz tensa (Rd bajo). Poco juntas o poca
+      // fuerza → voz relajada/soplada (Rd alto).
+      const tension = Math.min(1, Math.max(0, (aduccion - 0.45) / 0.4)) * Math.min(1, 0.4 + this.amplitud * 0.7);
+      this.forma = formaLF(2.5 - 1.6 * tension);
     }
 
-    const flujo = Glotis.pulso(this.fase, this.cocienteAbierto) * this.amplitud * this.shimmer;
-    const deriv = (flujo - this.flujoPrevio) * this.sr / Math.max(80, this.f0) * 0.12;
-    this.flujoPrevio = flujo;
-    this.apertura = flujo;
-    return { deriv, flujo };
+    const a = this.amplitud * this.shimmer;
+    const deriv = ondaLF(this.forma, this.fase) * a * 0.25;
+    const abierto = this.fase < this.forma.te ? Math.sin((Math.PI * this.fase) / this.forma.te) : 0;
+    this.apertura = abierto * this.amplitud;
+    return { deriv, flujo: abierto };
   }
 }

@@ -98,3 +98,25 @@ test('si se queda sin aire hablando, toma aire solo', () => {
   correr(b, 15, (e) => (inspiro ||= e.respiracion === 'inspirar'));
   assert.ok(inspiro);
 });
+
+test('/t/ y /k/ cierran del todo aunque la mandíbula venga abierta de una /a/', () => {
+  for (const f of ['t', 'k']) {
+    const b = new BocaArtificial(SR);
+    b.decir(planificarFonema(f));
+    let maxPb = 0;
+    let pl = 0;
+    correr(b, 0.55, (e) => {
+      if (e.etiqueta === f) {
+        maxPb = Math.max(maxPb, e.pBoca);
+        pl = e.pPulmon;
+      }
+    });
+    assert.ok(maxPb > 0.8 * pl, `${f}: presión boca ${maxPb} vs pulmones ${pl}`);
+  }
+});
+
+test('las resonancias son nítidas (ancho de banda del F1 de /a/ < 150 Hz)', async () => {
+  const { anchoBandaF1 } = await import('./utilidades.js');
+  const bw = anchoBandaF1(VOCALES.a);
+  assert.ok(bw < 150, `ancho de banda ${bw} Hz`);
+});
