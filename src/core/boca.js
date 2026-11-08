@@ -15,7 +15,7 @@ import {
 import { Tracto } from './tracto.js';
 import { Pulmones } from './pulmones.js';
 import { Glotis, tensionAFrecuencia } from './glotis.js';
-import { Resonador, Ruido, PasoAltos } from './filtros.js';
+import { Resonador, Ruido, PasoAltos, Biquad } from './filtros.js';
 
 // Velocidad de cada articulador (constante de tiempo en segundos).
 export const INERCIA = {
@@ -65,6 +65,18 @@ export class BocaArtificial {
     this.aspHP = new PasoAltos(sr, 300);
     this.dcBloqueo = new PasoAltos(sr, 30);
 
+    // Contra el zumbido:
+    //  - la fuente glotal pierde los agudos que no tiene una voz real
+    //    (y que al muestrear se doblan como armónicos metálicos);
+    //  - a la salida, se recortan los graves bajo el tono (hum) y lo que
+    //    queda por encima de 8 kHz (aliasing de la guía de ondas).
+    this.fuenteLP = Biquad.pasaBajos(sr, 4200, 0.6);
+    this.aspLP = Biquad.pasaBajos(sr, 2800, 0.7); // la aspiración real es grave-media
+    this.salidaHP = Biquad.pasaAltos(sr, 85, 0.7);
+    this.estante = Biquad.estanteGraves(sr, 320, -5);
+    this.salidaLP1 = Biquad.pasaBajos(sr, 8500, 0.54);
+    this.salidaLP2 = Biquad.pasaBajos(sr, 8500, 1.31);
+
     // Cajas de resonancia: senos paranasales (maxilar, frontal) y pecho.
     this.senoMaxilar = new Resonador(sr, 520, 4);
     this.senoFrontal = new Resonador(sr, 1150, 5);
@@ -86,6 +98,7 @@ export class BocaArtificial {
     this.ampPrev = { ...this.amp };
     this.iFriccion = -1;
     this.iEstrechez = -1;
+    this.iDientes = INDICE_DIENTES;
     this.pBocaPrevia = 0;
     this.areaGlotisMedia = 0.5;
 
@@ -211,7 +224,7 @@ export class BocaArtificial {
 
     // Aspiración (aire turbulento en la glotis): más con la glotis abierta.
     const velGlotis = Math.abs(p.flujoGlotis) / Math.max(0.05, this.areaGlotisMedia);
-    const aspiracion = clamp(velGlotis * 0.05, 0, 0.6) * (1 - 0.7 * juntas) + 0.012 * voz;
+    const aspiracion = clamp(velGlotis * 0.05, 0, 0.6) * (1 - 0.7 * juntas) + 0.03 * voz; // un poco de aire en la voz: menos «máquina»
 
     // Fricación: turbulencia en el punto más estrecho de la boca.
     let friccion = 0;
@@ -223,7 +236,8 @@ export class BocaArtificial {
       // Sibilantes: la punta lanza el chorro contra los dientes.
       if (iMin >= 32 && iMin <= 37) dientes = friccion * 0.25;
       // Labiodental (f): el labio inferior roza los dientes de arriba.
-      if (iMin >= 40) dientes = friccion * 0.3;
+      if (iMin >= 40) dientes = friccion * 1.4;
+      this.iDientes = iMin >= 40 ? N - 1 : INDICE_DIENTES; // en la /f/ el roce es en el labio
       if (p.flujoBoca < 0) friccion *= 0.3; // inhalar por la boca suena suave
     }
 
@@ -273,20 +287,24 @@ export class BocaArtificial {
       tr.reflexGlotis = 0.92 - 0.3 * glot.apertura - 0.45 * apertura * apertura;
 
       // Aspiración modulada por el ciclo glotal, coloreada por la tráquea.
-      let ruidoAsp = this.aspHP.paso(this.ruido.blanco()) * asp * (0.4 + 0.6 * (voz > 0.05 ? flujo : 1));
+      let ruidoAsp = this.aspLP.paso(this.aspHP.paso(this.ruido.blanco())) * 1.8 * asp * (0.4 + 0.6 * (voz > 0.05 ? flujo : 1));
       ruidoAsp += (this.traquea1.paso(ruidoAsp) + this.traquea2.paso(ruidoAsp)) * apertura * 0.8;
 
       // Pecho: resonancia grave de la voz.
-      const fuente = deriv + this.pecho.paso(deriv) * res * 0.4 + ruidoAsp * 0.15;
+      const voz0 = this.fuenteLP.paso(deriv);
+      const fuente = voz0 + this.pecho.paso(voz0) * res * 0.12 + ruidoAsp * 0.15;
 
       const blanco = this.ruidoHP.paso(this.ruido.blanco());
-      const ruidoF = blanco * fri * 0.012;
-      const ruidoD = blanco * die * 0.02;
+      const ruidoF = blanco * fri * 0.022;
+      const labial = this.iDientes === N - 1;
+      // en la /f/ el ruido nace en el labio y sale directo al aire
+      const ruidoD = labial ? 0 : blanco * die * 0.034;
+      const ruidoLabial = labial ? blanco * die * 0.012 : 0;
 
-      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, INDICE_DIENTES);
+      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, this.iDientes);
       let labios = tr.salidaLabios;
       let nariz = tr.salidaNariz;
-      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, INDICE_DIENTES);
+      tr.paso(fuente, ruidoF, this.iFriccion, ruidoD, this.iDientes);
       labios = 0.5 * (labios + tr.salidaLabios);
       nariz = 0.5 * (nariz + tr.salidaNariz);
 
@@ -295,12 +313,14 @@ export class BocaArtificial {
 
       // La fuente LF ya es la derivada del flujo, que incluye el efecto de
       // radiación de los labios; aquí sólo se suman boca y nariz.
-      const sal = labios + nariz * 0.45; // las narinas radian menos que la boca
+      const sal = labios + nariz * 0.45 + ruidoLabial; // las narinas radian menos que la boca
       // Radiación parcial: las aberturas pequeñas radian peor los graves.
       const rad = sal - this.radiacion * this.salidaPrevia;
       this.salidaPrevia = sal;
 
-      let s = this.dcBloqueo.paso(rad) * this.ganancia;
+      let s = this.dcBloqueo.paso(rad);
+      s = this.salidaLP2.paso(this.salidaLP1.paso(this.estante.paso(this.salidaHP.paso(s))));
+      s *= this.ganancia;
       s = Math.tanh(s); // limitador suave
       salida[i] = s;
       energia += s * s;

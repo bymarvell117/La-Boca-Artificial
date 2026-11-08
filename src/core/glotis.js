@@ -51,6 +51,8 @@ export class Glotis {
     this.periodoJitter = 1;
     this.shimmer = 1;
     this.tVibrato = 0;
+    this.deriva = 0;
+    this.derivaObjetivo = 0;
     this.semilla = 12345;
   }
 
@@ -70,13 +72,16 @@ export class Glotis {
 
     this.tVibrato += dt;
     const vibrato = 1 + 0.005 * Math.sin(2 * Math.PI * 5.1 * this.tVibrato);
-    const f = this.f0 * vibrato * this.periodoJitter;
+    // deriva lenta e irregular del tono, como en una voz humana
+    this.deriva += (this.derivaObjetivo - this.deriva) * 0.0004;
+    const f = this.f0 * vibrato * this.periodoJitter * (1 + this.deriva);
 
     this.fase += f * dt;
     if (this.fase >= 1) {
       this.fase -= 1;
-      this.periodoJitter = 1 + (this.azar() - 0.5) * 0.01;
-      this.shimmer = 1 + (this.azar() - 0.5) * 0.05;
+      this.periodoJitter = 1 + (this.azar() - 0.5) * 0.016;
+      this.shimmer = 1 + (this.azar() - 0.5) * 0.08;
+      if (this.azar() < 0.08) this.derivaObjetivo = (this.azar() - 0.5) * 0.03;
       // Cuerdas muy juntas → voz tensa (Rd bajo). Poco juntas o poca
       // fuerza → voz relajada/soplada (Rd alto).
       const tension = Math.min(1, Math.max(0, (aduccion - 0.45) / 0.4)) * Math.min(1, 0.4 + this.amplitud * 0.7);
