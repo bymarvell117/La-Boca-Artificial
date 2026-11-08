@@ -1,0 +1,11 @@
+{
+  "name": "la-boca-artificial",
+  "version": "0.1.0",
+  "description": "Simulador del aparato fonador humano: pulmones, laringe, tracto vocal, nariz y articuladores, con síntesis de voz en español.",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node servidor.js",
+    "test": "node --test tests/*.test.js"
+  }
+}

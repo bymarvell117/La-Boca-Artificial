@@ -1,0 +1,227 @@
+:root {
+  --fondo: #f6f3ef;
+  --lienzo: #fbf8f4;
+  --superficie: #ffffff;
+  --borde: #e2dbd2;
+  --texto: #2b2420;
+  --texto-suave: #6e6259;
+  --acento: #b0413e;
+  --acento-texto: #ffffff;
+
+  /* anatomía */
+  --piel: #f1d2bd;
+  --piel-borde: #c99a7e;
+  --mucosa: #e58f8f;
+  --mucosa-oscura: #a94a52;
+  --aire: #9cc9e8;
+  --hueso: #efe6d2;
+  --diente: #ffffff;
+  --lengua: #d9686f;
+  --labio: #c9545d;
+  --pulmon: #e7a1a6;
+  --musculo: #b8484c;
+  --cartilago: #d8c3a5;
+  --presion: #ff7a3d;
+  --particula: #2f7fc1;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --fondo: #191615;
+    --lienzo: #201c1a;
+    --superficie: #282321;
+    --borde: #3b3431;
+    --texto: #f1e9e4;
+    --texto-suave: #b3a69e;
+    --acento: #f0817b;
+    --acento-texto: #1c1312;
+    --piel: #6d5244;
+    --piel-borde: #9b7a68;
+    --mucosa: #b9636a;
+    --mucosa-oscura: #7c3740;
+    --aire: #5e93b8;
+    --hueso: #cbbfa8;
+    --diente: #f4f1ea;
+    --lengua: #c4565e;
+    --labio: #b44a53;
+    --pulmon: #a8646b;
+    --musculo: #c25458;
+    --cartilago: #a99376;
+    --presion: #ff8c52;
+    --particula: #9fd3ff;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --fondo: #191615;
+  --lienzo: #201c1a;
+  --superficie: #282321;
+  --borde: #3b3431;
+  --texto: #f1e9e4;
+  --texto-suave: #b3a69e;
+  --acento: #f0817b;
+  --acento-texto: #1c1312;
+  --piel: #6d5244;
+  --piel-borde: #9b7a68;
+  --mucosa: #b9636a;
+  --mucosa-oscura: #7c3740;
+  --aire: #5e93b8;
+  --hueso: #cbbfa8;
+  --diente: #f4f1ea;
+  --lengua: #c4565e;
+  --labio: #b44a53;
+  --pulmon: #a8646b;
+  --musculo: #c25458;
+  --cartilago: #a99376;
+  --presion: #ff8c52;
+  --particula: #9fd3ff;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+.cabecera {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 20px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--borde);
+}
+.cabecera h1 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
+.cabecera p { margin: 0; color: var(--texto-suave); flex: 1 1 280px; }
+
+button, select, textarea, input { font: inherit; color: inherit; }
+button {
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  border-radius: 8px;
+  padding: 7px 14px;
+  cursor: pointer;
+}
+button:hover { border-color: var(--texto-suave); }
+button.primario { background: var(--acento); color: var(--acento-texto); border-color: transparent; font-weight: 600; }
+button:focus-visible, select:focus-visible, textarea:focus-visible, input:focus-visible {
+  outline: 2px solid var(--acento);
+  outline-offset: 2px;
+}
+
+.disposicion {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 380px;
+  gap: 16px;
+  padding: 16px 20px 24px;
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.escena {
+  position: relative;
+  background: var(--lienzo);
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  min-height: 520px;
+  height: calc(100vh - 120px);
+  max-height: 960px;
+}
+#lienzo { width: 100%; height: 100%; display: block; }
+.interruptor {
+  position: absolute;
+  left: 12px;
+  bottom: 10px;
+  font-size: 13px;
+  color: var(--texto-suave);
+}
+
+.panel { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+
+.medidores {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.medidor {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 10px;
+  padding: 6px 10px;
+}
+.medidor span { display: block; font-size: 11px; color: var(--texto-suave); }
+.medidor strong { font-size: 16px; font-variant-numeric: tabular-nums; }
+
+.pestanas { display: flex; gap: 4px; border-bottom: 1px solid var(--borde); }
+.pestanas button {
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: none;
+  padding: 8px 10px;
+  color: var(--texto-suave);
+}
+.pestanas button[aria-selected="true"] { color: var(--texto); border-bottom-color: var(--acento); font-weight: 600; }
+
+.pestana { display: flex; flex-direction: column; gap: 10px; }
+.pestana label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--texto-suave); }
+textarea, select {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 8px;
+  padding: 8px;
+}
+textarea { resize: vertical; }
+.fila { display: flex; gap: 10px; flex-wrap: wrap; }
+.fila > label { flex: 1 1 140px; }
+input[type="range"] { width: 100%; accent-color: var(--acento); }
+.transcripcion {
+  margin: 0;
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 14px;
+  min-height: 1.4em;
+  overflow-wrap: anywhere;
+}
+.nota { margin: 0; font-size: 12px; color: var(--texto-suave); }
+
+.grupo { border: 1px solid var(--borde); border-radius: 10px; padding: 8px 12px 10px; background: var(--superficie); }
+.grupo h3 { margin: 0 0 6px; font-size: 13px; }
+.grupo .control { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; align-items: center; margin: 4px 0; }
+.grupo .control span { font-size: 13px; color: var(--texto-suave); }
+.grupo .control output { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--texto-suave); }
+.grupo .control input { grid-column: 1 / -1; }
+#controles { display: flex; flex-direction: column; gap: 10px; }
+
+#botones-fonemas { display: flex; flex-direction: column; gap: 10px; }
+.fonemas { display: flex; flex-wrap: wrap; gap: 6px; }
+.fonemas button { min-width: 54px; padding: 6px 10px; }
+.fonemas button small { display: block; font-size: 11px; color: var(--texto-suave); }
+
+.aviso {
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100% - 32px));
+  background: var(--superficie);
+  border: 1px solid var(--acento);
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin: 0;
+}
+
+@media (max-width: 900px) {
+  .disposicion { grid-template-columns: 1fr; padding: 12px 16px 20px; }
+  .escena { height: 70vh; min-height: 420px; }
+  .cabecera { padding: 12px 16px; }
+}
+
+@media (max-width: 520px) {
+  .medidores { grid-template-columns: repeat(2, 1fr); }
+}

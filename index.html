@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La Boca Artificial</title>
+  <meta name="description" content="Simulador del aparato fonador humano: respira, vibra y habla en español.">
+  <link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+  <header class="cabecera">
+    <h1>La Boca Artificial</h1>
+    <p>Un aparato fonador simulado: pulmones, laringe, garganta, nariz, lengua, dientes y labios.</p>
+    <button id="encender" class="primario">Encender sonido</button>
+  </header>
+
+  <main class="disposicion">
+    <section class="escena" aria-label="Corte de perfil del aparato fonador">
+      <canvas id="lienzo"></canvas>
+      <label class="interruptor"><input type="checkbox" id="nombres" checked> Mostrar nombres</label>
+    </section>
+
+    <aside class="panel">
+      <div class="medidores" id="medidores"></div>
+
+      <nav class="pestanas" role="tablist">
+        <button role="tab" aria-selected="true" data-pestana="hablar">Hablar</button>
+        <button role="tab" aria-selected="false" data-pestana="fonemas">Fonemas</button>
+        <button role="tab" aria-selected="false" data-pestana="manual">Control manual</button>
+      </nav>
+
+      <section class="pestana" id="pestana-hablar">
+        <label for="texto">Escribe algo en español</label>
+        <textarea id="texto" rows="3">Hola, soy la boca artificial. ¿Me oyes bien?</textarea>
+        <div class="fila">
+          <label>Voz
+            <select id="voz">
+              <option value="95">Grave</option>
+              <option value="125" selected>Media</option>
+              <option value="210">Aguda</option>
+            </select>
+          </label>
+          <label>Acento
+            <select id="acento">
+              <option value="latam">Latinoamérica (s)</option>
+              <option value="es">España (z/c = θ)</option>
+            </select>
+          </label>
+        </div>
+        <label>Velocidad <output id="velocidad-v">1.0×</output>
+          <input type="range" id="velocidad" min="0.6" max="1.5" step="0.05" value="1">
+        </label>
+        <div class="fila">
+          <button id="hablar" class="primario">Hablar</button>
+          <button id="parar">Parar</button>
+        </div>
+        <p class="transcripcion" id="transcripcion" aria-live="polite"></p>
+        <p class="nota">TTS mecánico: reglas de pronunciación del español que mueven cada órgano. No usa voces grabadas ni IA.</p>
+      </section>
+
+      <section class="pestana" id="pestana-fonemas" hidden>
+        <div id="botones-fonemas"></div>
+      </section>
+
+      <section class="pestana" id="pestana-manual" hidden>
+        <div id="controles"></div>
+      </section>
+    </aside>
+  </main>
+
+  <p class="aviso" id="aviso" hidden></p>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
