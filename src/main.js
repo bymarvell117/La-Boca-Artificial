@@ -48,6 +48,32 @@ function avisar(texto) {
   a.hidden = !texto;
 }
 
+// Plan B sin AudioWorklet: la simulación corre en el hilo principal.
+function motorDeReserva(ctx) {
+  const boca = new BocaArtificial(ctx.sampleRate);
+  const proc = ctx.createScriptProcessor(1024, 0, 2);
+  const trozo = new Float32Array(128);
+  proc.onaudioprocess = (ev) => {
+    const izq = ev.outputBuffer.getChannelData(0);
+    const der = ev.outputBuffer.getChannelData(1);
+    for (let i = 0; i < izq.length; i += 128) {
+      boca.procesar(trozo);
+      izq.set(trozo, i);
+      der.set(trozo, i);
+    }
+    estado = boca.instantanea();
+  };
+  proc.connect(ctx.destination);
+  return {
+    postMessage(m) {
+      if (m.tipo === 'fijar') boca.fijar(m.objetivos);
+      else if (m.tipo === 'decir') boca.decir(m.plan);
+      else if (m.tipo === 'parar') boca.parar();
+      else if (m.tipo === 'volumen') boca.ganancia = m.valor;
+    },
+  };
+}
+
 async function encender() {
   if (contexto) {
     if (contexto.state === 'suspended') await contexto.resume();
@@ -55,28 +81,29 @@ async function encender() {
   }
   try {
     contexto = new AudioContext({ latencyHint: 'interactive' });
-    await contexto.audioWorklet.addModule('src/audio/procesador.js');
-    nodo = new AudioWorkletNode(contexto, 'boca-artificial', { outputChannelCount: [2] });
-    nodo.connect(contexto.destination);
-    nodo.port.onmessage = (e) => (estado = e.data);
-    nodo.port.postMessage({ tipo: 'volumen', valor: +volumen.value });
-    $('encender').textContent = 'Sonido encendido';
-    $('encender').disabled = true;
-    avisar('');
-    return true;
   } catch (err) {
-    console.error(err);
-    contexto = null;
-    avisar(
-      location.protocol === 'file:'
-        ? 'Abre la página con el servidor local: ejecuta "node servidor.js" y entra en http://localhost:8080'
-        : 'No se pudo iniciar el audio: ' + err.message,
-    );
+    avisar('Este navegador no puede reproducir audio: ' + err.message);
     return false;
   }
+  try {
+    await contexto.audioWorklet.addModule(new URL('./audio/procesador.js', import.meta.url));
+    const n = new AudioWorkletNode(contexto, 'boca-artificial', { outputChannelCount: [2] });
+    n.connect(contexto.destination);
+    n.port.onmessage = (e) => (estado = e.data);
+    nodo = n.port;
+  } catch (err) {
+    console.warn('AudioWorklet no disponible, uso el motor de reserva:', err);
+    nodo = motorDeReserva(contexto);
+  }
+  if (contexto.state === 'suspended') await contexto.resume();
+  nodo.postMessage({ tipo: 'volumen', valor: +volumen.value });
+  $('encender').textContent = 'Sonido encendido';
+  $('encender').disabled = true;
+  avisar('');
+  return true;
 }
 
-const enviar = (m) => nodo && nodo.port.postMessage(m);
+const enviar = (m) => nodo && nodo.postMessage(m);
 
 $('encender').addEventListener('click', encender);
 
